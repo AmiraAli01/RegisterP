@@ -10,6 +10,7 @@ using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using ScientificJournals.Models;
 
+
 namespace ScientificJournals.Controllers
 {
     [Authorize]
@@ -167,14 +168,63 @@ namespace ScientificJournals.Controllers
                 }
                 AddErrors(result);
             }
-
-            // If we got this far, something failed, redisplay form
-            return View(model);
+           
+                // If we got this far, something failed, redisplay form
+                return View(model);
+        }
+        [AllowAnonymous]
+        public ActionResult RegisterP()
+        {
+            ApplicationDbContext db = new ApplicationDbContext();
+            ViewBag.Major = new SelectList(db.Majors, "Id", "Name");
+            return View();
         }
 
         //
-        // GET: /Account/ConfirmEmail
+        // POST: /Account/Register
+        [HttpPost]
         [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> RegisterP(RegisterViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = new ApplicationUser {
+                    UserName = model.UserName,
+                     Email = model.Email,
+                    FullName = model.FirstName +" "+model.LastName ,
+                    PhoneNumber = model.PhoneNamber
+                   
+                };
+                var result = await UserManager.CreateAsync(user, model.Password);
+                if (result.Succeeded)
+                {
+                    await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
+
+                    // For more information on how to enable account confirmation and password reset please visit https://go.microsoft.com/fwlink/?LinkID=320771
+                    // Send an email with this link
+                    // string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+                    // var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Url.Scheme);
+                    // await UreserManager.SendEmailAsync(user.Id, "Confirm your account", "Please confirm your account by clicking <a href=\"" + callbackUrl + "\">here</a>");
+                    RegisterP registerP = new RegisterP()
+                    {
+                        ISSN = model.ISSN,
+                        Origination = model.Organization,
+                        MajorId = model.Major,
+                        ApplicationUserId = user.Id
+                    };
+                    ApplicationDbContext db = new ApplicationDbContext();
+                    db.RegisterPs.Add(registerP);
+                    db.SaveChanges();
+                    return RedirectToAction("Index", "Home");
+                }
+                AddErrors(result);
+            }
+            return View(model);
+        }
+            //
+            // GET: /Account/ConfirmEmail
+            [AllowAnonymous]
         public async Task<ActionResult> ConfirmEmail(string userId, string code)
         {
             if (userId == null || code == null)
